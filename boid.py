@@ -1,9 +1,15 @@
+from tkinter import *
+from random import randint
+import math
+
 class Boid:
     # A boid has a position, velocity, and unique identifier
-    def __init__(self, x, y, velocity, identifier):
-        self.position = Vector(x,y)
+    def __init__(self, position, velocity, identifier, canvas):
+        self.position = position
         self.velocity = velocity
         self.id = identifier
+
+        self.shape = canvas.create_oval(position[0], position[1], position[0] + 25, position[1]+25, fill="blue", outline="black")
 
     # Function that updates the velocity of a boid
     def addVelocity(self, vel):
