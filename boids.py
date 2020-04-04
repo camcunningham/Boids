@@ -3,62 +3,26 @@ from boid import *
 import random
 import cmath, math
 from utility import *
+import numpy as np
 
 '''
-Structure:
+CISC 352 Assignment 3: Boids implementation
+Uses Tkinter for graphics
 
-init positions
-
-Loop:
-    draw_boids()
-        Draws all boids at their current position
-    updateBoidPositions()
-        Will change their velocities based on the three rules for each boid
-        Then will apply that to their position
-        Structure:
-            Vector v1,v2,v3
-            for boid in boids:
-                v1 = rule1(boid)
-                v2 = rule2(boid)
-                v3 = rule3(boid)
-
-                boid.velocity += (v1 + v2 + v3)
-                boid.position = boid.position + boid.velocity
-EndLoop
-
-The rules:
-
-Rule 1: Boids try to fly towards the center of mass of neighbouring boids (Cohesion)
-
-Rule 2: Boids keep a small distance between them and other boids (Separation)
-
-Rule 3: Boids try to match their velocity with other boids (Alignment)
-
-For a soft bound:
-PROCEDURE bound_position(Boid b)
-	Integer Xmin, Xmax, Ymin, Ymax, Zmin, Zmax
-	Vector v
-
-	IF b.position.x < Xmin THEN
-		v.x = 10
-	ELSE IF b.position.x > Xmax THEN
-		v.x = -10
-	END IF
-	IF b.position.y < Ymin THEN
-		v.y = 10
-	ELSE IF b.position.y > Ymax THEN
-		v.y = -10
-	END IF
-	IF b.position.z < Zmin THEN
-		v.z = 10
-	ELSE IF b.position.z > Zmax THEN
-		v.z = -10
-	END IF
-
-	RETURN v
-END PROCEDURE
+Cam Cunningham
+Ellie Sekine
+Emily Gauvreau
+Tamir Arnesty
+Daniel Goldstein
 '''
-MAXSPEED = 2
+
+# Global setting variables
+MAX_SPEED = 5
+DRIFT = 0.5
+PERCEPTION = 70
+MAX_FORCE = 0.05
+SIZE = 800
+
 # Function that moves the boids based on their velocity: Runs once then repeats every 25ms
 def moveBoids():
     # Update boid position based on rules
@@ -70,106 +34,125 @@ def moveBoids():
     # Run this function again
     root.after(10,moveBoids)
 
+# Updates each boids velocity based on the rules
 def updateBoidVelocities():
+    # Run through each boid and apply the 4 modifiers
     for boid in boids:
-        # Normalizing speed so it doesnt go out of control
-        if boid.velocity[0] > MAXSPEED:
-            boid.velocity = (MAXSPEED, boid.velocity[1])
-        elif boid.velocity[0] < (-MAXSPEED):
-            boid.velocity = (-MAXSPEED, boid.velocity[1])
-
-        if boid.velocity[1] > MAXSPEED:
-            boid.velocity = (boid.velocity[0], MAXSPEED)
-        elif boid.velocity[1] < (-MAXSPEED):
-            boid.velocity = (boid.velocity[0], -MAXSPEED)
-
-
         v1 = rule1(boid)
         v2 = rule2(boid)
         v3 = rule3(boid)
-        v4 = edgeRule(boid)
-
+        v4 = rule4(boid)
         boid.velocity = tadd(boid.velocity, v1)
         boid.velocity = tadd(boid.velocity, v2)
-        # boid.velocity = tadd(boid.velocity, v3)
+        boid.velocity = tadd(boid.velocity, v3)
         boid.velocity = tadd(boid.velocity, v4)
 
-        # print("VELOCITY FOR BOID CURRENTLY:" + str(boid.velocity[0]) + "," + str(boid.velocity[1]))
-        # print("VELOCITY FOR EDGE RULE CURRENTLY:" + str(v4[0]) + "," + str(v4[1]))
-        # Apply new changes to boids velocity
-        # boid.velocity = (boid.velocity[0] + v1[0] + v2[0] + v3[0] + v4[0], boid.velocity[1] + v1[1] + v2[1] + v3[1] + v4[0])
+        # Ensuring that speed does not go over MAX_SPEED, if it does, set speed to MAX_SPEED
+        if math.hypot(boid.velocity[0], boid.velocity[1]) > MAX_SPEED:
+            boid.velocity = tmul(boid.velocity, 0.9)
 
-# Temp return values for these right now
-
-# Rule 1: Boids try to fly towards the center of mass of neighbouring boids
+# Cohesion
 def rule1(b):
-    changeInVel = (0,0)
+    # Vector that will be added to b's velocity
+    steering = (0,0)
+    # Total number of boids that impact this one based on perception value
+    total = 0
+    # Vector that holds center of mass that this boid will fly toward
+    centerOfMass = (0,0)
+    # Run through each boid
     for boid in boids:
-        if boid is not b:
-            changeInVel = tadd(changeInVel, boid.position)
-    changeInVel = (changeInVel[0] / len(boids) - 1, changeInVel[1] / len(boids) - 1)
-    # Making the change smaller: Dividing it by 100 makes it move 1% of the way towards center
-    return ( (changeInVel[0] - b.position[0]) / 2000 , (changeInVel[0] - b.position[0]) / 2000 )
+        # Store the subtraction of the boid - this boid
+        temp = tsub(boid.position, b.position)
+        # If the normalized vector holding the distance between this boid and the one in the loop is less than
+        # the perception value, it impacts us, add it to center mass and increase total
+        if np.linalg.norm([temp[0], temp[1]]) < PERCEPTION:
+            # Add to center of mass
+            centerOfMass = tadd(centerOfMass, boid.position)
+            # Increase total
+            total += 1
+    # If total > 0 then at least one other boid impacted this one, need to make a change
+    if total > 0:
+        # To get the average center of mass, divide the aggregate by total
+        centerOfMass = tdiv(centerOfMass, total)
+        # Vector to be compared
+        vecToCompare = tsub(centerOfMass, b.position)
+        # If the normalized vector is greater than 0
+        if np.linalg.norm([vecToCompare[0], vecToCompare[1]]) > 0:
+            # Scale it to be MAX_SPEED
+            vecToCompare = tmul(tdiv(vecToCompare, np.linalg.norm([vecToCompare[0], vecToCompare[1]])), MAX_SPEED)
+        # Apply changes to steering vector
+        steering = tsub(vecToCompare, b.velocity)
+        # If these changes apply more force than legal
+        if np.linalg.norm([steering[0], steering[1]]) > MAX_FORCE:
+            # Change that value to be the maximum: MAX_FORCE
+            steering = tmul(tdiv(steering, np.linalg.norm([steering[0], steering[1]])), MAX_FORCE)
+    return steering
 
-# Rule 2: Boids keep a small distance between them and other boids
+# Separation
 def rule2(b):
-    changeInVel = (0,0)
+    # Vector that will be applied to b's velocity
+    steering = (0,0)
+    # For each boid
     for boid in boids:
+        # If the boid is not itself
         if boid is not b:
-            if abs(boid.position[0] - b.position[0]) < 10 and abs(boid.position[1] - b.position[1]) < 50:
-                changeInVel = tdiv(tsub(changeInVel, (tsub(boid.position, b.position))), 5)
-    return changeInVel
+            # No need to check perception, we basically do that here
+            # If the distance between b and the boid is less than 25, do not move any closer
+            if abs(boid.position[0] - b.position[0]) < 25 and abs(boid.position[1] - b.position[1]) < 25:
+                steering = tdiv(tsub(steering, (tsub(boid.position, b.position))), 5)
+    return steering
 
-# Rule 3: Boids try to match velocity with near boids
+# Alignment
 def rule3(b):
-    changeInVel = (0,0)
+    # Steering vector to be returned
+    steering = (0,0)
+    # Total boids that will affect this one based on perception range
+    total = 0
+    # Vector that will hold the average position of the perceptable boids
+    average = (0,0)
     for boid in boids:
-        if boid is not b:
-            changeInVel = tadd(changeInVel, boid.velocity)
-    changeInVel = tdiv(changeInVel, len(boids) - 1)
-    return tdiv(tsub(changeInVel, b.velocity), 8)
+        # Store the subtraction of boid and b in temp variable
+        temp = tsub(boid.position, b.position)
+        # If the normalized position vector is in perception range, then if will affect us
+        if np.linalg.norm([temp[0], temp[1]]) < PERCEPTION:
+            # Add this vectors velocity to the average
+            average = tadd(average, boid.velocity)
+            # Increase total boids affecting b
+            total += 1
+        # If total > 0 then this boid was impacted by at least one other so we apply the change
+        if total > 0:
+            # Divite average by total to get the average velocity of the flock
+            average = tdiv(average, total)
+            # Normalize the average velocity so we can scale it to our MAX_SPEED
+            average = tmul(tdiv(average, np.linalg.norm([average[0], average[1]])), MAX_SPEED)
+            # To get the direction we want to steer in, subtract b's velocity from the average velocity, and
+            # add that vector to b's velocity
+            steering = tsub(average, b.velocity)
+    return steering
 
-def edgeRule(b):
-    XMIN = 100
-    YMIN = 100
-    XMAX = 600
-    YMAX = 600
-    changeInVel = (0,0)
-
-    if b.position[0] < XMIN:
-        print(" XMIN Conditiion met")
-        changeInVel = (1, changeInVel[1])
-    elif b.position[0] > XMAX:
-        print("XMAX Conditiion met")
-        changeInVel = (-1, changeInVel[1])
-
-    if b.position[1] < YMIN:
-        print("YMIN Conditiion met")
-        changeInVel = (changeInVel[0], 1)
-    elif b.position[1] > YMAX:
-        print("YMAX Conditiion met")
-        changeInVel = (changeInVel[0], -1)
-
-    return changeInVel
-
-
-
-
-
-
+# Soft boundary
+def rule4(boid):
+  sum = (0.0, 0.0)
+  # Magnitude of velocity vector
+  mag = math.hypot(boid.velocity[0], boid.velocity[1])
+  # Check if the position of the boid is outside of legal bounds, if so add / subtract (based on limit being lowest or highest)
+  # a velocity based on drift and magnitude
+  if boid.position[0] < 0:
+    sum = tadd(sum, (DRIFT * mag, 0.0))
+  if boid.position[0] > SIZE:
+    sum = tsub(sum, (DRIFT * mag, 0.0))
+  if boid.position[1] < 0:
+    sum = tadd(sum, (0.0, DRIFT * mag))
+  if boid.position[1] > SIZE:
+    sum = tsub(sum, (0.0, DRIFT * mag))
+  return sum
 
 root = Tk()
-
-WIDTH = 1000
-HEIGHT = 1000
-
-canvas = Canvas(root, height=1000, width=1000)
-
+canvas = Canvas(root, height=800, width=800)
 boids = []
-# Create 10 boids with random velocities at random locations
-for i in range(10):
-    boids.append(Boid((random.randint(1,500), random.randint(1,500)), (1,1), i, canvas))
-
+# Create 15 boids with random velocities at random locations
+for i in range(15):
+    boids.append(Boid((random.randint(1,500), random.randint(1,500)), (random.randint(1,2),random.randint(-2,-1)), i, canvas))
 
 canvas.pack()
 moveBoids()
