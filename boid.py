@@ -1,7 +1,7 @@
 class Boid:
     # A boid has a position, velocity, and unique identifier
-    def __init__(self, position, velocity, identifier):
-        self.position = position
+    def __init__(self, x, y, velocity, identifier):
+        self.position = Vector(x,y)
         self.velocity = velocity
         self.id = identifier
 
