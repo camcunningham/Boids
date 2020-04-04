@@ -2,6 +2,7 @@ import tkinter as tk
 from boid import *
 import random
 import cmath, math
+from utility import *
 
 '''
 Structure:
@@ -60,22 +61,25 @@ END PROCEDURE
 # Function that moves the boids based on their velocity: Runs once then repeats every 25ms
 def moveBoids():
     # Update boid position based on rules
-    updateBoidPositions()
+    updateBoidVelocities()
     for boid in boids:
         # Move on screen
         canvas.move(boid.shape, boid.velocity[0], boid.velocity[1])
+        boid.position = tadd(boid.position, boid.velocity)
     # Run this function again
-    root.after(25,moveBoids)
+    root.after(10,moveBoids)
 
-def updateBoidPositions():
+def updateBoidVelocities():
     for boid in boids:
-        v1 = rule1(boid)
-        v2 = rule2(boid)
-        v3 = rule3(boid)
+        # v1 = rule1(boid)
+        # v2 = rule2(boid)
+        # v3 = rule3(boid)
         v4 = edgeRule(boid)
-
+        boid.velocity = tadd(boid.velocity, v4)
+        # print("VELOCITY FOR BOID CURRENTLY:" + str(boid.velocity[0]) + "," + str(boid.velocity[1]))
+        # print("VELOCITY FOR EDGE RULE CURRENTLY:" + str(v4[0]) + "," + str(v4[1]))
         # Apply new changes to boids velocity
-        boid.velocity = (boid.velocity[0] + v1[0] + v2[0] + v3[0] + v4[0], boid.velocity[1] + v1[1] + v2[1] + v3[1] + v4[1])
+        # boid.velocity = (boid.velocity[0] + v1[0] + v2[0] + v3[0] + v4[0], boid.velocity[1] + v1[1] + v2[1] + v3[1] + v4[0])
 
 # Temp return values for these right now
 
@@ -84,20 +88,53 @@ def rule1(b):
     changeInVel = (0,0)
     for boid in boids:
         if boid is not b:
-            changeInVel = (changeInVel[0] + boid.position[0], changeInVel[1] + boid.position[1])
+            changeInVel = tadd(changeInVel, boid.position)
     changeInVel = (changeInVel[0] / len(boids) - 1, changeInVel[1] / len(boids) - 1)
     # Making the change smaller: Dividing it by 100 makes it move 1% of the way towards center
     return ( (changeInVel[0] - b.position[0]) / 100 , (changeInVel[0] - b.position[0]) / 100 )
 
 # Rule 2: Boids keep a small distance between them and other boids
 def rule2(b):
-    return (0.25, 0.25)
+    changeInVel = (0,0)
+    for boid in boids:
+        if boid is not b:
+            if abs(tdist(boid.position, b.position)) < 100:
+                changeInVel = tsub(changeInVel, (tsub(boid.position, b.position)))
+    return changeInVel
 
+# Rule 3: Boids try to match velocity with near boids
 def rule3(b):
-    return (0.25,0.25)
+    changeInVel = (0,0)
+    for boid in boids:
+        if boid is not b:
+            changeInVel = tadd(changeInVel, boid.velocity)
+    changeInVel = tdiv(changeInVel, len(boids) - 1)
+    return tdiv(tsub(changeInVel, b.velocity), 8)
 
 def edgeRule(b):
-    return (0.25,0.25)
+    XMIN = -100
+    YMIN = -100
+    XMAX = 600
+    YMAX = 600
+    changeInVel = (0,0)
+
+    if b.position[0] < XMIN:
+        print(" XMIN Conditiion met")
+        changeInVel = (1, changeInVel[1])
+    elif b.position[0] > XMAX:
+        print("XMAX Conditiion met")
+        changeInVel = (-1, changeInVel[1])
+
+    if b.position[1] < YMIN:
+        print("YMIN Conditiion met")
+        changeInVel = (changeInVel[0], 1)
+    elif b.position[1] > YMAX:
+        print("YMAX Conditiion met")
+        changeInVel = (changeInVel[0], -1)
+
+    return changeInVel
+
+
 
 
 
@@ -112,8 +149,8 @@ canvas = Canvas(root, height=500, width=500)
 
 boids = []
 # Create 10 boids with random velocities at random locations
-for i in range(10):
-    boids.append(Boid((random.randint(1,500), random.randint(1,500)),(random.randint(-4,4),random.randint(-4,4)), i, canvas))
+for i in range(25):
+    boids.append(Boid((random.randint(1,500), random.randint(1,500)), (1,1), i, canvas))
 
 
 canvas.pack()
