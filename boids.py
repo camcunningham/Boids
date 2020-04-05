@@ -47,7 +47,7 @@ def updateBoidVelocities():
         boid.velocity = tadd(boid.velocity, v3)
         boid.velocity = tadd(boid.velocity, v4)
 
-        # Ensuring that speed does not go over MAX_SPEED, if it does, set speed to MAX_SPEED
+        # Ensuring that speed does not go over MAX_SPEED, if it does, reduce speed by 10%
         if math.hypot(boid.velocity[0], boid.velocity[1]) > MAX_SPEED:
             boid.velocity = tmul(boid.velocity, 0.9)
 
@@ -95,7 +95,7 @@ def rule2(b):
     # For each boid
     for boid in boids:
         # If the boid is not itself
-        if boid is not b:
+        if boid.id != b.id:
             # No need to check perception, we basically do that here
             # If the distance between b and the boid is less than 25, do not move any closer
             if abs(boid.position[0] - b.position[0]) < 25 and abs(boid.position[1] - b.position[1]) < 25:
@@ -132,20 +132,20 @@ def rule3(b):
 
 # Soft boundary
 def rule4(boid):
-  sum = (0.0, 0.0)
-  # Magnitude of velocity vector
-  mag = math.hypot(boid.velocity[0], boid.velocity[1])
-  # Check if the position of the boid is outside of legal bounds, if so add / subtract (based on limit being lowest or highest)
-  # a velocity based on drift and magnitude
-  if boid.position[0] < 0:
-    sum = tadd(sum, (DRIFT * mag, 0.0))
-  if boid.position[0] > SIZE:
-    sum = tsub(sum, (DRIFT * mag, 0.0))
-  if boid.position[1] < 0:
-    sum = tadd(sum, (0.0, DRIFT * mag))
-  if boid.position[1] > SIZE:
-    sum = tsub(sum, (0.0, DRIFT * mag))
-  return sum
+    sum = (0.0, 0.0)
+    # Magnitude of velocity vector
+    mag = math.hypot(boid.velocity[0], boid.velocity[1])
+    # Check if the position of the boid is outside of legal bounds, if so add / subtract (based on limit being lowest or highest)
+    # a velocity based on drift and magnitude
+    if boid.position[0] < 0:
+        sum = tadd(sum, (DRIFT * mag, 0.0))
+    if boid.position[0] > SIZE:
+        sum = tsub(sum, (DRIFT * mag, 0.0))
+    if boid.position[1] < 0:
+        sum = tadd(sum, (0.0, DRIFT * mag))
+    if boid.position[1] > SIZE:
+        sum = tsub(sum, (0.0, DRIFT * mag))
+    return sum
 
 root = Tk()
 canvas = Canvas(root, height=800, width=800)
