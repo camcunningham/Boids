@@ -5,17 +5,6 @@ import cmath, math
 from utility import *
 import numpy as np
 
-'''
-CISC 352 Assignment 3: Boids implementation
-Uses Tkinter for graphics
-
-Cam Cunningham 20059656
-Ellie Sekine 20071971
-Emily Gauvreau 20074874
-Tamir Arnesty 20063753
-Daniel Goldstein 20119615
-'''
-
 # Global setting variables
 MAX_SPEED = 5
 DRIFT = 0.5
