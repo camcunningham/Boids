@@ -1,4 +1,4 @@
 # Boids
 
-Flocking simulation using Python
+An AI flocking simulation implemented using Python with Tkinter for graphics
 
